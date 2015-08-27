@@ -111,7 +111,7 @@ KinesisStream.prototype.getShardIteratorRecords = function(shard, cb) {
     getShardIterator = function(cb) { cb(null, shard.nextShardIterator) }
   } else {
     if (shard.readSequenceNumber != null) {
-      data.ShardIteratorType = 'AFTER_SEQUENCE_NUMBER'
+      data.ShardIteratorType = 'AT_SEQUENCE_NUMBER'
       data.StartingSequenceNumber = shard.readSequenceNumber
     } else if (self.options.oldest) {
       data.ShardIteratorType = 'TRIM_HORIZON'
@@ -129,6 +129,7 @@ KinesisStream.prototype.getShardIteratorRecords = function(shard, cb) {
   getShardIterator(function(err, shardIterator) {
     if (err) return cb(err)
 
+    self.emit('shard', { shardId: shard.id, sequence: shard.readSequenceNumber })
     self.getRecords(shard, shardIterator, function(err, records) {
       if (err) {
         // Try again if the shard iterator has expired
