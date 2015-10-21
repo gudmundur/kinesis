@@ -15,6 +15,7 @@ exports.KinesisStream = KinesisStream
 exports.listStreams = listStreams
 exports.request = request
 
+var nullLogger = { log: function noop() {} }
 
 function KinesisStream(options) {
   if (typeof options == 'string') options = {name: options}
@@ -29,6 +30,7 @@ function KinesisStream(options) {
   this.paused = true
   this.fetching = false
   this.shards = []
+  this.logger = options.logger || nullLogger
 }
 util.inherits(KinesisStream, stream.Duplex)
 
@@ -164,16 +166,26 @@ KinesisStream.prototype.getRecords = function(shard, shardIterator, cb) {
       limit = self.options.limit || 25,
       data = {ShardIterator: shardIterator, Limit: limit}
 
+  self.logger.log({ get_records: true, at: 'start' })
   request('GetRecords', data, self.options, function(err, res) {
-    if (err) return cb(err)
+    if (err) {
+      self.logger.log({ get_records: true, at: 'error', error: err })
+      return cb(err)
+    }
 
     // If the shard has been closed the requested iterator will not return any more data
     if (res.NextShardIterator == null) {
+      self.logger.log({ get_records: true, at: 'shard-ended' })
       shard.ended = true
       return cb(null, [])
     }
 
     shard.nextShardIterator = res.NextShardIterator
+    self.logger.log({
+      get_records: true,
+      at: 'finish',
+      record_count: res.Records.length
+    })
 
     res.Records.forEach(function(record) {
       record.ShardId = shard.id
@@ -337,10 +349,29 @@ function request(action, data, options, cb) {
 
       aws4.sign(httpOptions, options.credentials)
 
+      options.logger.log({
+        kinesis_request: true,
+        at: 'start',
+        host: httpOptions.host,
+        path: httpOptions.path,
+        action: action
+      });
+
       var req = https.request(httpOptions, function(res) {
         var json = ''
 
         res.setEncoding('utf8')
+
+        res.on('error', function(error) {
+          options.logger.log({
+            kinesis_request: true,
+            at: 'error',
+            host: httpOptions.host,
+            path: httpOptions.path,
+            action: action,
+            error: error
+          });
+        })
 
         res.on('error', cb)
         res.on('data', function(chunk) { json += chunk })
@@ -350,8 +381,17 @@ function request(action, data, options, cb) {
           if (json)
             try { response = JSON.parse(json) } catch (e) { parseError = e }
 
-          if (res.statusCode == 200 && !parseError)
+          if (res.statusCode == 200 && !parseError) {
+            options.logger.log({
+              kinesis_request: true,
+              at: 'finish',
+              host: httpOptions.host,
+              path: httpOptions.path,
+              action: action
+            });
+
             return cb(null, response)
+          }
 
           var error = new Error
           error.statusCode = res.statusCode
@@ -362,6 +402,17 @@ function request(action, data, options, cb) {
             if (res.statusCode == 413) json = 'Request Entity Too Large'
             error.message = 'HTTP/1.1 ' + res.statusCode + ' ' + json
           }
+
+          options.logger.log({
+            kinesis_request: true,
+            at: 'error',
+            host: httpOptions.host,
+            path: httpOptions.path,
+            action: action,
+            status: error.statusCode,
+            name: error.name,
+            message: error.message
+          });
 
           cb(error)
         })
