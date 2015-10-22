@@ -1,9 +1,9 @@
 {
-  "name": "kinesis",
-  "version": "1.2.2",
-  "description": "A stream implementation of Amazon's Kinesis",
+  "name": "@heroku/kinesis",
+  "version": "2.0.0",
+  "description": "A stream implementation of Amazon's Kinesis forked from mhart/kinesis",
   "main": "index.js",
-  "repository": "mhart/kinesis",
+  "repository": "heroku/kinesis",
   "keywords": [
     "kinesis",
     "stream",
