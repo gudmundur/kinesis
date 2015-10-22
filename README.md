@@ -87,6 +87,7 @@ Returns a readable and writable Node.js stream for the given Kinesis stream
   - `errorNames`: array of Kinesis exceptions to retry on
     (`['ProvisionedThroughputExceededException', 'ThrottlingException']` by default)
   - `retryPolicy`: a function to implement a retry policy different from the default one
+  - `logger`: an object which implements a `log` method, e.g. `console`.
 
 ### kinesis.listStreams([options], callback)
 
