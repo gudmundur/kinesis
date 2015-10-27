@@ -388,7 +388,9 @@ function request(action, data, options, cb) {
               host: httpOptions.host,
               path: httpOptions.path,
               action: action,
-              status: res.statusCode
+              status: res.statusCode,
+              length: json.length,
+              content_length: res.headers['content-length']
             });
 
             return cb(null, response)
