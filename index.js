@@ -387,7 +387,8 @@ function request(action, data, options, cb) {
               at: 'finish',
               host: httpOptions.host,
               path: httpOptions.path,
-              action: action
+              action: action,
+              status: res.statusCode
             });
 
             return cb(null, response)
