@@ -421,7 +421,18 @@ function request(action, data, options, cb) {
         })
       }).on('error', cb)
 
-      if (options.timeout != null) req.setTimeout(options.timeout)
+      if (options.timeout != null) {
+        req.setTimeout(options.timeout, function() {
+          options.logger.log({
+            kinesis_request: true,
+            at: 'timeout',
+            host: httpOptions.host,
+            path: httpOptions.path,
+            action: action,
+          })
+          req.abort()
+        })
+      }
 
       req.end(body)
 
