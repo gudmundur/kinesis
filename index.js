@@ -510,6 +510,7 @@ function resolveOptions(options) {
     options.host = region
   }
   if (!options.version) options.version = '20131202'
+  if (!options.logger) options.logger = nullLogger
 
   return options
 }
