@@ -236,7 +236,7 @@ KinesisStream.prototype._write = function(data, encoding, cb) {
   request('PutRecord', data, self.options, function(err, responseData) {
     self.currentWrites--
     if (err) {
-      self.emit('putRecord')
+      self.emit('putRecord', data)
       return self.emit('error', err)
     }
     sequenceNumber = responseData.SequenceNumber
@@ -246,7 +246,7 @@ KinesisStream.prototype._write = function(data, encoding, cb) {
 
     self.resolveShards(function(err, shards) {
       if (err) {
-        self.emit('putRecord')
+        self.emit('putRecord', data)
         return self.emit('error', err)
       }
       for (var i = 0; i < shards.length; i++) {
@@ -255,7 +255,7 @@ KinesisStream.prototype._write = function(data, encoding, cb) {
         if (bignumCompare(sequenceNumber, shards[i].writeSequenceNumber) > 0)
           shards[i].writeSequenceNumber = sequenceNumber
 
-        self.emit('putRecord')
+        self.emit('putRecord', data)
       }
     })
   })
@@ -263,13 +263,13 @@ KinesisStream.prototype._write = function(data, encoding, cb) {
   if (self.currentWrites < self.writeConcurrency)
     return cb()
 
-  function onPutRecord() {
+  function onPutRecord(_data) {
+    if(data !== _data) return;
     self.removeListener('putRecord', onPutRecord)
     cb()
   }
   self.on('putRecord', onPutRecord)
 }
-
 
 function listStreams(options, cb) {
   if (!cb) { cb = options; options = {} }
@@ -510,6 +510,7 @@ function resolveOptions(options) {
     options.host = region
   }
   if (!options.version) options.version = '20131202'
+  if (!options.logger) options.logger = nullLogger
 
   return options
 }
